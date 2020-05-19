@@ -69,11 +69,9 @@
                     <span class ="navbar-toggler-icon" onclick="openNav()"> <h4 style = "margin-left: 38px">Fishbowl</h4></span>
                 </a>
                 <a class = "ml-auto">
-<<<<<<< HEAD
                     Welcome, <span id = "username"></span> - Room <span id = "roomCode"></span>
-=======
-                    Welcome, <span id = "username"></span>
->>>>>>> 5c8619903660dcb64ff6ca5b1b43a25207bcd50e
+
+
                 </a>
             </nav>
             <div id = "content-wrap" class = 'row m-3'>
@@ -138,7 +136,6 @@
             myName = '';
             myDiv = ''; 
             var socket = io();
-<<<<<<< HEAD
             //room stuff
             var myQuery = new URLSearchParams(window.location.search); 
             myRoom = myQuery.get("roomID");
@@ -150,8 +147,6 @@
                 document.getElementById('roomCode').innerText = myRoom;
             });
             //game stuff
-=======
->>>>>>> 5c8619903660dcb64ff6ca5b1b43a25207bcd50e
             socket.on('welcome', function(data){
                 myName = data.message; 
                 document.getElementById('username').innerText = myName; 
@@ -243,7 +238,6 @@
                 
             });
             socket.on('sendData', function(data){
-<<<<<<< HEAD
                 for(var i = 2; i < data.pack[myRoom].length; i++)
                 {
                     var playerId = 'p' + ('' + (i-1));
@@ -264,51 +258,21 @@
                 for(var s = 2; s < data.pack[myRoom].length; s++){
                     var tabEle = data.pack[myRoom][s];
                     if(tabEle.inTable){
-=======
-                for(var i = 0; i < data.pack.length; i++)
-                {
-                    var playerId = 'p' + ('' + (i+1));
-                    var curDiv = document.getElementById(playerId);
-                    if(data.pack[i].id == myName){
-                        curDiv.innerHTML = 'me: ' + data.pack[i].id;
-                        curDiv.style = 'font-weight: bold';
-                    }
-                    else{
-                        curDiv.innerHTML = data.pack[i].id;
-                        curDiv.style = '';
-                    }
-                }
-                for(var b = 12; b > data.pack.length; b-- ){
-                        var div = document.getElementById('p' + ('' + b)); 
-                        div.innerHTML = ""; 
-                }
-                for(var s in data.pack){
-                    var tabEle = data.pack[s];
-                    if(tabEle.inTable){
-
->>>>>>> 5c8619903660dcb64ff6ca5b1b43a25207bcd50e
                         var tabDiv = document.getElementById(tabEle.divId);
                         tabDiv.innerHTML = tabEle.id; 
                     }
                 }
                 timer = document.getElementById('timer');
-<<<<<<< HEAD
+
                 timer.innerHTML = 'Time Left: ' + data.pack[myRoom][0]; 
                 var idx = 1; 
                 for(var p in data.pack[myRoom][1]){
                     var div = document.getElementById('team' + (''+ idx));
                     div.innerHTML = 'Team ' + data.pack[myRoom][1][p].name + ': \n ' + data.pack[myRoom][1][p].pts;
-=======
-                timer.innerHTML = 'Time Left: ' + data.timer; 
-                var idx = 1; 
-                for(var p in data.points){
-                    var div = document.getElementById('team' + (''+ idx));
-                    div.innerHTML = 'Team ' + data.points[p].name + ': \n ' + data.points[p].pts;
->>>>>>> 5c8619903660dcb64ff6ca5b1b43a25207bcd50e
-                    idx += 1
+
                 }
             
-            })
+            });
         
         </script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.concat.min.js"></script>
