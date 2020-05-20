@@ -44,6 +44,10 @@ io.sockets.on('connection', function(socket){
     currentNumberOfUsers += 1;
 //stuff for joining ROOM
     socket.on('joinRoom', function(data){
+        var idx1 = "" + Math.floor(userPrefix.length*Math.random());
+        var idx2 = "" + Math.floor(userSuffix.length*Math.random());
+        socket.id = userPrefix[idx1] + '-' + userSuffix[idx2];
+        SOCKET_LIST[socket.id] = socket;
         if(data.code in ROOM){
             console.log("helo");
             console.log(data.code);
@@ -67,10 +71,14 @@ io.sockets.on('connection', function(socket){
         socket.emit('myRoom', {code: data.code});
     });
     socket.on('createRoom', function(data){
+        var idx1 = "" + Math.floor(userPrefix.length*Math.random());
+        var idx2 = "" + Math.floor(userSuffix.length*Math.random());
+        socket.id = userPrefix[idx1] + '-' + userSuffix[idx2];
+        SOCKET_LIST[socket.id] = socket;
         var randCode = '' + Math.floor(Math.random() * 10000);
         ROOM[randCode] = {
             sockets: [], 
-            TABLE_LIST: {}, 
+            TABLE_LIST: [], 
             POINTS: {}, 
             DICTIONARY: [], 
             ALREADY_SEEN: new Set(),
@@ -83,17 +91,49 @@ io.sockets.on('connection', function(socket){
     });
 //stuff for game
 
-    console.log('socket connection')
-    var idx1 = "" + Math.floor(userPrefix.length*Math.random());
-    var idx2 = "" + Math.floor(userSuffix.length*Math.random());
-    socket.id = userPrefix[idx1] + '-' + userSuffix[idx2];
-    socket.emit('welcome', {message:socket.id});
-   // socket.connectionNum = currentNumberOfUsers;
-    SOCKET_LIST[socket.id] = socket;
+
     socket.on('disconnect', function(){
+        socket = SOCKET_LIST[socket.id]; 
+        console.log(socket.room);
+        if(socket.room !== undefined){
+            var code = socket.room; 
+            var divId = '';
+            var roomSockets = ROOM[code].sockets;
+            var table = ROOM[code].TABLE_LIST;
+            var tableIdx = table.indexOf(socket.id);
+            if(tableIdx != -1){
+                divId = socket.divId;
+                ROOM[code].TABLE_LIST.splice(tableIdx, 1);
+            }
+            var idx = roomSockets.indexOf(socket.id);
+            if(idx != -1){
+                ROOM[code].sockets.splice(idx,1);
+            }
+            if(ROOM[code].sockets.length === 0){
+                console.log("ROOM DELETED");
+                delete ROOM[code];
+            }
+            else{
+                for(var team in ROOM[code].POINTS){
+                    var curplayers = ROOM[code].POINTS[team].players; 
+                    if(curplayers[0] == socket.id || curplayers[1] == socket.id){
+                        delete ROOM[code].POINTS[team];
+                    }
+        
+                }
+                console.log(ROOM);
+                for(var s = 0; s < ROOM[code].sockets.length; s++){
+                    var socket2 = SOCKET_LIST[ROOM[code].sockets[s]];
+                    socket2.emit('clearTeams');
+                    socket2.emit('clearTable', {divId: divId});
+                    socket2.emit('clearLobby');
+                }
+            }
+
+        }
         delete SOCKET_LIST[socket.id];
-        currentNumberOfUsers -=1; //might have to change all the users connection Numbers
-    })
+    
+    });
 
 
     // socket.on('timer', function(data){
@@ -228,7 +268,7 @@ io.sockets.on('connection', function(socket){
                 if(nums%2 == 0 && ('game' + (''+(nums+1))) == SOCKET_LIST[i].divId){
                     SOCKET_LIST[i].team = ROOM[code].teamNumber; 
                     SOCKET_LIST[socket.id].team = ROOM[code].teamNumber; 
-                    ROOM[code].POINTS[teamNumber] = {pts:0, name:ROOM[code].teamNumber, players:[socket.id, i]}; 
+                    ROOM[code].POINTS[ROOM[code].teamNumber] = {pts:0, name:ROOM[code].teamNumber, players:[socket.id, i]}; 
                     ROOM[code].teamNumber += 1; 
                     break; 
                 }
@@ -299,13 +339,15 @@ setInterval(function(){
     for(var r in ROOM){
         packLobby[r] = [ROOM[r].TIMER, ROOM[r].POINTS];
         for(var i = 0; i < ROOM[r].sockets.length; i++){
-            var socket2 = SOCKET_LIST[ROOM[r].sockets[i]];
-
-            packLobby[r].push({
-                id:socket2.id,
-                divId: socket2.divId,
-                inTable: socket2.inTable
-            }); //builds a pack of current users and their associated data
+            if(ROOM[r].sockets[i] in SOCKET_LIST){
+                var socket2 = SOCKET_LIST[ROOM[r].sockets[i]];
+    
+                packLobby[r].push({
+                    id:socket2.id,
+                    divId: socket2.divId,
+                    inTable: socket2.inTable
+                }); //builds a pack of current users and their associated data
+            }
         }
 
     }

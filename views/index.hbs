@@ -193,6 +193,19 @@
                     ok.innerHTML = "";
                 }
             });
+            socket.on('clearLobby', function(data){
+                for(var p = 1; p <13; p++){
+                    var lit = document.getElementById('p' + ("" + p));
+                    lit.innerHTML = ""; 
+                }
+            });
+            socket.on('clearTable', function(data){
+                if(data.divId != ''){
+                    var alrighty = document.getElementById(data.divId);
+                    alrighty.innerHTML = '<button class = "btn btn-light" onclick="joinGame(this.parentElement.id);">Move Here</button>';
+                    
+                }
+            })
             socket.on('showEveryone', function(data){
                 var div = document.getElementById('printWord');
                 div.innerHTML = 'The word was: ' + data.word; 
@@ -250,10 +263,6 @@
                         curDiv.innerHTML = data.pack[myRoom][i].id;
                         curDiv.style = '';
                     }
-                }
-                for(var b = 12; b > data.pack[myRoom].length; b-- ){
-                        var div = document.getElementById('p' + ('' + b)); 
-                        div.innerHTML = ""; 
                 }
                 for(var s = 2; s < data.pack[myRoom].length; s++){
                     var tabEle = data.pack[myRoom][s];
