@@ -199,11 +199,17 @@
                     lit.innerHTML = ""; 
                 }
             });
-            socket.on('clearTable', function(data){
+            socket.on('clearTablePos', function(data){
                 if(data.divId != ''){
                     var alrighty = document.getElementById(data.divId);
                     alrighty.innerHTML = '<button class = "btn btn-light" onclick="joinGame(this.parentElement.id);">Move Here</button>';
                     
+                }
+            })
+            socket.on('clearTable', function(data){
+                for(var g = 2; g < 14; g++){
+                    var okk = document.getElementById('game' + ('' + g));
+                    okk.innerHTML = '<button class = "btn btn-light" onclick="joinGame(this.parentElement.id);">Move Here</button>';
                 }
             })
             socket.on('showEveryone', function(data){
@@ -278,7 +284,7 @@
                 for(var p in data.pack[myRoom][1]){
                     var div = document.getElementById('team' + (''+ idx));
                     div.innerHTML = 'Team ' + data.pack[myRoom][1][p].name + ': \n ' + data.pack[myRoom][1][p].pts;
-
+                    idx += 1;
                 }
             
             });

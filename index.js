@@ -89,7 +89,7 @@ io.sockets.on('connection', function(socket){
         };
         socket.emit('redirect', {num: '1', code: randCode}); 
     });
-//stuff for game
+//stuff for game logistics
 
 
     socket.on('disconnect', function(){
@@ -118,6 +118,7 @@ io.sockets.on('connection', function(socket){
                     var curplayers = ROOM[code].POINTS[team].players; 
                     if(curplayers[0] == socket.id || curplayers[1] == socket.id){
                         delete ROOM[code].POINTS[team];
+                        ROOM[code].teamNumber -=1;
                     }
         
                 }
@@ -125,7 +126,7 @@ io.sockets.on('connection', function(socket){
                 for(var s = 0; s < ROOM[code].sockets.length; s++){
                     var socket2 = SOCKET_LIST[ROOM[code].sockets[s]];
                     socket2.emit('clearTeams');
-                    socket2.emit('clearTable', {divId: divId});
+                    socket2.emit('clearTable');
                     socket2.emit('clearLobby');
                 }
             }
@@ -135,33 +136,64 @@ io.sockets.on('connection', function(socket){
     
     });
 
-
-    // socket.on('timer', function(data){
-    //     TIMER = data.time; 
-    // })
-    socket.on('pause', function(data){
-        bool = false; 
-    });
-    socket.on('drawCard', function(data){
-        //var userName = document.getElementById('game' + mainPlayers[curMpIdx]);
+    socket.on('updateTable', function(data){
         socket = SOCKET_LIST[socket.id];
+
         var code = socket.room; 
-        if(ROOM[code].DICTIONARY.length - ROOM[code].ALREADY_SEEN.size === 5){
-            socket.emit('under5');
-        }
-        if(ROOM[code].DICTIONARY.length - ROOM[code].ALREADY_SEEN.size === 0){
-            socket.emit('noWords');
+        if(!socket.inTable){
+            socket.inTable = true; 
+            socket.divId = data.divId; 
+            ROOM[code].TABLE_LIST = [];
+            var players = ROOM[code].sockets;
+            for(var s = 0; s < players.length; s++){
+                var ss = SOCKET_LIST[players[s]];
+                if(ss.inTable){
+                    ROOM[code].TABLE_LIST.push(ss.id); 
+                }
+            }
         }
         else{
-            var idx = Math.floor(ROOM[code].DICTIONARY.length*Math.random());
-            while(ROOM[code].ALREADY_SEEN.has(idx))
-            {
-                idx = Math.floor(ROOM[code].DICTIONARY.length*Math.random());
+            var og = socket.divId; 
+            socket.divId = data.divId; 
+            var teamChange = false; 
+            for(var team in ROOM[code].POINTS){
+                var curplayers = ROOM[code].POINTS[team].players; 
+                if(curplayers[0] == socket.id || curplayers[1] == socket.id){
+                    delete ROOM[code].POINTS[team];
+                    ROOM[code].teamNumber -=1;
+                    teamChange = true; 
+                }
+        
             }
-    
-            var word = ROOM[code].DICTIONARY[idx];
-            socket.emit('retWord', {curWord:word}); 
+            console.log(ROOM);
+            for(var s = 0; s < ROOM[code].sockets.length; s++){
+                var ss = SOCKET_LIST[ROOM[code].sockets[s]];
+                if(teamChange){
+                    ss.emit('clearTeams');
+                }
+                ss.emit('clearTablePos', {divId: og});
+            }
         }
+
+        for(var n = 0; n < ROOM[code].TABLE_LIST.length; n++){
+            var i = ROOM[code].TABLE_LIST[n]; 
+            var nums = parseInt(data.divId.substring(4));
+            if(nums%2 == 0 && ('game' + (''+(nums+1))) == SOCKET_LIST[i].divId){
+                SOCKET_LIST[i].team = ROOM[code].teamNumber; 
+                SOCKET_LIST[socket.id].team = ROOM[code].teamNumber; 
+                ROOM[code].POINTS[ROOM[code].teamNumber] = {pts:0, name:ROOM[code].teamNumber, players:[socket.id, i]}; 
+                ROOM[code].teamNumber += 1; 
+                break; 
+            }
+            else if(nums%2 != 0 && ('game' + (''+(nums-1))) == SOCKET_LIST[i].divId){
+                SOCKET_LIST[i].team = ROOM[code].teamNumber; 
+                SOCKET_LIST[socket.id].team = ROOM[code].teamNumber; 
+                ROOM[code].POINTS[ROOM[code].teamNumber] = {pts:0, name:ROOM[code].teamNumber, players:[socket.id, i]}; 
+                ROOM[code].teamNumber += 1; 
+                break; 
+            }
+        }
+
     });
     socket.on('updateid', function(data){
         socket = SOCKET_LIST[socket.id]; 
@@ -196,31 +228,30 @@ io.sockets.on('connection', function(socket){
             ROOM[code].POINTS['' + socket.team].name = data.newId; 
         }
     });
-    socket.on('startGame', function(data){
+    socket.on('reset', function(data){
         socket = SOCKET_LIST[socket.id];
         var code = socket.room; 
-        console.log(ROOM[code].POINTS);
-
-        if((Object.keys(ROOM[code].POINTS).length * 2) == ROOM[code].TABLE_LIST.length){
-            ROOM[code].bool = true; 
-            var players = ROOM[code].sockets;
-            for(var i in players){
-                var socket2 = SOCKET_LIST[players[i]];
-                socket2.emit('clientStart', {
-                    mainP1: SOCKET_LIST[ROOM[code].POINTS[ROOM[code].currTeam].players[0]].divId,
-                    mainP2: SOCKET_LIST[ROOM[code].POINTS[ROOM[code].currTeam].players[1]].divId
-                });
-            }
+        ROOM[code].TABLE_LIST = [];
+        ROOM[code].POINTS = {};
+        ROOM[code].DICTIONARY = [];
+        ROOM[code].TIMER = 30;
+        ROOM[code].bool = false; 
+        ROOM[code].teamNumber = 0; 
+        var players = ROOM[code].sockets;
+        for(var i = 0; i < players.length; i++){
+            var socket2 = SOCKET_LIST[players[i]];
+            socket2.inTable = false; 
+            socket2.divId = undefined; 
+            socket2.emit('clearTeams');
+            socket2.emit('clearLobby');
+            socket2.emit('clearTablePos', {divId: 'reset'});
         }
-        else{
-            socket.emit('oddPlayer');
-        }
-
+    
     });
-
-    socket.on('resumeGame', function(data){
-        bool = true; 
-    });
+    // socket.on('timer', function(data){
+    //     TIMER = data.time; 
+    // })
+//stuff for dictionary 
     socket.on('addWord', function(data){
 
         socket = SOCKET_LIST[socket.id];
@@ -246,65 +277,67 @@ io.sockets.on('connection', function(socket){
 
     });
 
-    socket.on('updateTable', function(data){
+    socket.on('drawCard', function(data){
+        //var userName = document.getElementById('game' + mainPlayers[curMpIdx]);
         socket = SOCKET_LIST[socket.id];
-
         var code = socket.room; 
-        if(!socket.inTable){
-            socket.inTable = true; 
-            socket.divId = data.divId; 
-            ROOM[code].TABLE_LIST = [];
-            var players = ROOM[code].sockets;
-            for(var s = 0; s < players.length; s++){
-                var ss = SOCKET_LIST[players[s]];
-                if(ss.inTable){
-                    ROOM[code].TABLE_LIST.push(ss.id); 
-                }
+        if(ROOM[code].DICTIONARY.length - ROOM[code].ALREADY_SEEN.size === 5){
+            socket.emit('under5');
+        }
+        if(ROOM[code].DICTIONARY.length - ROOM[code].ALREADY_SEEN.size === 0){
+            socket.emit('noWords');
+        }
+        else{
+            var idx = Math.floor(ROOM[code].DICTIONARY.length*Math.random());
+            while(ROOM[code].ALREADY_SEEN.has(idx))
+            {
+                idx = Math.floor(ROOM[code].DICTIONARY.length*Math.random());
             }
-
-            for(var n = 0; n < ROOM[code].TABLE_LIST.length; n++){
-                var i = ROOM[code].TABLE_LIST[n]; 
-                var nums = parseInt(data.divId.substring(4));
-                if(nums%2 == 0 && ('game' + (''+(nums+1))) == SOCKET_LIST[i].divId){
-                    SOCKET_LIST[i].team = ROOM[code].teamNumber; 
-                    SOCKET_LIST[socket.id].team = ROOM[code].teamNumber; 
-                    ROOM[code].POINTS[ROOM[code].teamNumber] = {pts:0, name:ROOM[code].teamNumber, players:[socket.id, i]}; 
-                    ROOM[code].teamNumber += 1; 
-                    break; 
-                }
-                else if(nums%2 != 0 && ('game' + (''+(nums-1))) == SOCKET_LIST[i].divId){
-                    SOCKET_LIST[i].team = ROOM[code].teamNumber; 
-                    SOCKET_LIST[socket.id].team = ROOM[code].teamNumber; 
-                    ROOM[code].POINTS[ROOM[code].teamNumber] = {pts:0, name:ROOM[code].teamNumber, players:[socket.id, i]}; 
-                    ROOM[code].teamNumber += 1; 
-                    break; 
-                }
-            }
-
-
+    
+            var word = ROOM[code].DICTIONARY[idx];
+            socket.emit('retWord', {curWord:word}); 
         }
     });
+
     socket.on('resetDict', function(data){
         ROOM[code].ALREADY_SEEN.clear();
         console.log(ROOM[code].ALREADY_SEEN);
     })
-    socket.on('reset', function(data){
+//stuff for game functionality
+    socket.on('startGame', function(data){
         socket = SOCKET_LIST[socket.id];
         var code = socket.room; 
-        ROOM[code].TABLE_LIST = {}
-        ROOM[code].POINTS = {}
-        ROOM[code].DICTIONARY = []
-        ROOM[code].TIMER = 30
-        ROOM[code].bool = false; 
-        ROOM[code].teamNumber = 0; 
-        var players = ROOM[code].sockets;
-        for(var i = 0; i < players.length; i++){
-            var socket2 = SOCKET_LIST[players[i]];
-            socket2.inTable = false; 
-            socket2.emit('clearTeams');
+        console.log(ROOM[code].POINTS);
+
+        if((Object.keys(ROOM[code].POINTS).length * 2) == ROOM[code].TABLE_LIST.length){
+            ROOM[code].bool = true; 
+            var players = ROOM[code].sockets;
+            for(var i in players){
+                var socket2 = SOCKET_LIST[players[i]];
+                socket2.emit('clientStart', {
+                    mainP1: SOCKET_LIST[ROOM[code].POINTS[ROOM[code].currTeam].players[0]].divId,
+                    mainP2: SOCKET_LIST[ROOM[code].POINTS[ROOM[code].currTeam].players[1]].divId
+                });
+            }
         }
-    
+        else{
+            socket.emit('oddPlayer');
+        }
+
     });
+//timers
+    socket.on('resumeGame', function(data){
+        socket = SOCKET_LIST[socket.id];
+        var code = socket.room;
+        ROOM[code].bool = true; 
+    });
+    socket.on('pause', function(data){
+        socket = SOCKET_LIST[socket.id];
+        var code = socket.room;
+        ROOM[code].bool = false; 
+    });
+
+
 });
 function noTime(code) {
     ROOM[code].TIMER = 30; 
@@ -361,7 +394,6 @@ setInterval(function(){
     }
     
 }, 1000/40);
-
 
 // -------------- listener -------------- //
 var listener = http.listen(app.get('port'), function() {
