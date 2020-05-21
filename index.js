@@ -367,6 +367,7 @@ function countdown() {
         }
     }
 }
+//send data real-time to clientside
 setInterval(function(){
     var packLobby = {};
     for(var r in ROOM){
