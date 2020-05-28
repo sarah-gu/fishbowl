@@ -49,8 +49,7 @@ io.sockets.on('connection', function(socket){
         socket.id = userPrefix[idx1] + '-' + userSuffix[idx2];
         SOCKET_LIST[socket.id] = socket;
         if(data.code in ROOM){
-            console.log("helo");
-            console.log(data.code);
+        
             socket.emit('redirect', {num: '1', code: data.code}); 
         }
         else{
@@ -65,7 +64,6 @@ io.sockets.on('connection', function(socket){
         socket.emit('welcome', {message:socket.id});
        // socket.connectionNum = currentNumberOfUsers;
         SOCKET_LIST[socket.id] = socket;
-        console.log(data.code);
         socket.room = data.code; 
         ROOM[data.code].sockets.push(socket.id);
         socket.emit('myRoom', {code: data.code});
@@ -93,47 +91,48 @@ io.sockets.on('connection', function(socket){
 
 
     socket.on('disconnect', function(){
-        socket = SOCKET_LIST[socket.id]; 
-        console.log(socket.room);
-        if(socket.room !== undefined){
-            var code = socket.room; 
-            var divId = '';
-            var roomSockets = ROOM[code].sockets;
-            var table = ROOM[code].TABLE_LIST;
-            var tableIdx = table.indexOf(socket.id);
-            if(tableIdx != -1){
-                divId = socket.divId;
-                ROOM[code].TABLE_LIST.splice(tableIdx, 1);
-            }
-            var idx = roomSockets.indexOf(socket.id);
-            if(idx != -1){
-                ROOM[code].sockets.splice(idx,1);
-            }
-            if(ROOM[code].sockets.length === 0){
-                console.log("ROOM DELETED");
-                delete ROOM[code];
-            }
-            else{
-                for(var team in ROOM[code].POINTS){
-                    var curplayers = ROOM[code].POINTS[team].players; 
-                    if(curplayers[0] == socket.id || curplayers[1] == socket.id){
-                        delete ROOM[code].POINTS[team];
-                        ROOM[code].teamNumber -=1;
+        console.log(socket.id);
+        if(socket.id in SOCKET_LIST){
+            socket = SOCKET_LIST[socket.id]; 
+            if(socket.room !== undefined){
+                var code = socket.room; 
+                var divId = '';
+                var roomSockets = ROOM[code].sockets;
+                var table = ROOM[code].TABLE_LIST;
+                var tableIdx = table.indexOf(socket.id);
+                if(tableIdx != -1){
+                    divId = socket.divId;
+                    ROOM[code].TABLE_LIST.splice(tableIdx, 1);
+                }
+                var idx = roomSockets.indexOf(socket.id);
+                if(idx != -1){
+                    ROOM[code].sockets.splice(idx,1);
+                }
+                if(ROOM[code].sockets.length === 0){
+                    console.log("ROOM DELETED");
+                    delete ROOM[code];
+                }
+                else{
+                    for(var team in ROOM[code].POINTS){
+                        var curplayers = ROOM[code].POINTS[team].players; 
+                        if(curplayers[0] == socket.id || curplayers[1] == socket.id){
+                            delete ROOM[code].POINTS[team];
+                            ROOM[code].teamNumber -=1;
+                        }
+            
                     }
-        
+                    console.log(ROOM);
+                    for(var s = 0; s < ROOM[code].sockets.length; s++){
+                        var socket2 = SOCKET_LIST[ROOM[code].sockets[s]];
+                        socket2.emit('clearTeams');
+                        socket2.emit('clearTable');
+                        socket2.emit('clearLobby');
+                    }
                 }
-                console.log(ROOM);
-                for(var s = 0; s < ROOM[code].sockets.length; s++){
-                    var socket2 = SOCKET_LIST[ROOM[code].sockets[s]];
-                    socket2.emit('clearTeams');
-                    socket2.emit('clearTable');
-                    socket2.emit('clearLobby');
-                }
-            }
-
-        }
-        delete SOCKET_LIST[socket.id];
     
+            }
+            delete SOCKET_LIST[socket.id];
+        }
     });
 
     socket.on('updateTable', function(data){
@@ -165,7 +164,7 @@ io.sockets.on('connection', function(socket){
                 }
         
             }
-            console.log(ROOM);
+            
             for(var s = 0; s < ROOM[code].sockets.length; s++){
                 var ss = SOCKET_LIST[ROOM[code].sockets[s]];
                 if(teamChange){
@@ -257,7 +256,6 @@ io.sockets.on('connection', function(socket){
         socket = SOCKET_LIST[socket.id];
         var code = socket.room;
         ROOM[code].DICTIONARY.push(data.word); 
-
 
     });
     socket.on('removeWord', function(data){
@@ -375,7 +373,6 @@ setInterval(function(){
         for(var i = 0; i < ROOM[r].sockets.length; i++){
             if(ROOM[r].sockets[i] in SOCKET_LIST){
                 var socket2 = SOCKET_LIST[ROOM[r].sockets[i]];
-    
                 packLobby[r].push({
                     id:socket2.id,
                     divId: socket2.divId,
