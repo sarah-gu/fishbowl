@@ -25,5 +25,8 @@
   "homepage": "https://github.com/sarah-gu/fishbowl#readme",
   "engines": {
     "node": "10.x"
+  },
+  "dependencies": {
+    "express": "^4.17.1"
   }
 }
