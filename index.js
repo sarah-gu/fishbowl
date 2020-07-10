@@ -298,6 +298,8 @@ io.sockets.on('connection', function(socket){
     });
 
     socket.on('resetDict', function(data){
+        socket = SOCKET_LIST[socket.id];
+        var code = socket.room;
         ROOM[code].ALREADY_SEEN.clear();
         console.log(ROOM[code].ALREADY_SEEN);
     })
